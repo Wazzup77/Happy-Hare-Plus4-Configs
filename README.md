@@ -1,174 +1,40 @@
-# Happy-Hare-Plus4-Configs
+# Bunny Box - the Qidi Box Happy Hare conversion
+
+## Features
+
+ * Open source alternative to Qidi's Box control (
+    * No more .so files (you can update Python again)
+    * Full control over Qidi Box configuration
+ )
+ * Compatible with gcode generated for stock Qidi printers (
+    * printer profiles to make Orca Slicer or Prusa Slicer behave like Qidi Slicer also available
+    * alternatively, use of a typical Happy Hare printer profile is also supported
+ )
+ * Fully featured Happy Hare (
+    * the entire loading process can be tinkered with - increase loading speeds, change toolchange sequences, etc.
+    * Spoolman support for better filament management
+    * configurable LED effects depending on print / filament state
+ )
+
+ NOT SUPPORTED:
+ * RFID tags - maybe in the future, but honestly who cares?
+
+## Development status
+
+ * Happy Hare - the Qidi fork has been developed and tested, but not yet pulled into mainline. You can find it [here](https://github.com/Wazzup77/Happy-Hare).
+ * Plus4 - in beta, configs are available [here](Plus4), tested on 1.7.3.
+ * Q2 - in development, configs will be available. Happy Hare should work, but you will need to configure it yourself if you want to use it now.
+
+ Currently developed and tested on stock firmware. Other versions will likely be supported in the future - especially FreeDi!
+
+ Should be compatible with Beacon/Cartographer mods.
 
 ## ISSUES / TODO
-* cannot eject from Happy Hare UI
-* error handling could be improved I guess
-* should mostylu be fine, but report issues
+* Printer screen is broken
+* Error handling could be improved I guess
 
-## Installation
-
-### Happy Hare install
-
-1. Copy the configs (`mmu` folder and `bunnybox_macros.cfg`).
-
-2. Install Happy Hare from the [WIP Plus4 repo](https://github.com/Wazzup77/Happy-Hare).
-
-3. Run the install script `Happy-Hare/install.sh` and pray that it does not break stuff.
-
-4. Add `mmu__revision = 0` to `saved_variables.cfg'
-
-If you're modifying the files for development purposes you will need to rerun the install script.
-
-## `[printer.cfg]` changes
-
-1. Remove Qidi's stock box config include `[include box.cfg]`
-
-2. Add `[include bunnybox_macros.cfg]` at the top.
-
-3. Remove the `[hall_filament_width_sensor]` section. It is now defined and configured via Happy Hare.
-
-4. Make sure Happy Hare files were included during install: `[include mmu/base/*.cfg]`.
-
-### `[gcode_macro.cfg]` changes
-
-1. In PRINT_START we need to change Box detection logic:
-```diff
-[gcode_macro PRINT_START]
-gcode:
-[...]
--    {% if printer.save_variables.variables.box_count >= 1 %} 
-+    {% if printer.mmu.num_gates >= 4 %} 
-        SAVE_VARIABLE VARIABLE=load_retry_num VALUE=0 # saved variables probably need a rework
-        SAVE_VARIABLE VARIABLE=retry_step VALUE=None
-        SAVE_VARIABLE VARIABLE=is_tool_change VALUE=0
-        {% for i in range(16) %}
-            SAVE_VARIABLE VARIABLE=runout_{i} VALUE=0
-            G4 P100
-        {% endfor %}
-        SAVE_VARIABLE VARIABLE=extrude_state VALUE=-1
--        {% if printer.save_variables.variables.enable_box == 1 %}
-+        {% if printer.mmu.enabled %}
-            BOX_PRINT_START EXTRUDER={extruder} HOTENDTEMP={hotendtemp}
-            M400
-            EXTRUSION_AND_FLUSH HOTEND={hotendtemp}
-        {% endif %}
-[...]
-```
-
-2. In `PAUSE`
-```diff
-[gcode_macro PAUSE]
-rename_existing: BASE_PAUSE
-gcode:
-
-(...)
-
-        SET_IDLE_TIMEOUT TIMEOUT=86400
-        SET_STEPPER_ENABLE STEPPER=extruder enable=0
--        {% set slot_sync = printer.save_variables.variables.slot_sync|default("slot-1") %}
--        {% if printer['box_stepper ' ~ slot_sync] %}
--            SET_STEPPER_ENABLE STEPPER='box_stepper '{slot_sync} enable=0
-+        {% if printer.mmu.sync_drive %}
-+            {% set slot_sync = printer.mmu.tool|default("-1") %}
-+            {% if printer.mmu.tool == 0 %}
-+                SET_STEPPER_ENABLE STEPPER='stepper_mmu_gear' enable=0
-+            {% elif printer.mmu.tool > 0 %}
-+                SET_STEPPER_ENABLE STEPPER=('stepper_mmu_gear_' ~ {slot_sync}) enable=0
-        {% endif %}
-```
-
-3. In `RESUME_PRINT`
-
-```diff
-[gcode_macro RESUME_PRINT]
-    
-    (...)
-
-    {% if printer['pause_resume'].is_paused|int == 1 %}
--        {% if printer.save_variables.variables.box_count >= 1 and printer.save_variables.variables.enable_box == 1 and printer.save_variables.variables.is_tool_change == 1%} 
-+        {% if printer.mmu.num_gates >= 4 and if printer.mmu.enabled == True and printer.save_variables.variables.is_tool_change == 1%} 
-            SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}
-            MOVE_TO_TRASH
-            {% if etemp > 0 %}
-                M109 S{etemp|int}
-            {% endif %}
-            M83
-            RESTORE_GCODE_STATE NAME=PAUSEPARK2 MOVE=1 MOVE_SPEED=200                            
-            RESTORE_GCODE_STATE NAME=PAUSE MOVE=1 MOVE_SPEED=15
-            BASE_RESUME  
-        {% else %}
-            SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}
-            {% if etemp > 0 %}
-                M109 S{etemp|int}
-            {% endif %}
--            {% if printer.save_variables.variables.box_count >= 1 %} 
-+            {% if printer.mmu.num_gates >= 4 %} 
-                SAVE_VARIABLE VARIABLE=retry_step VALUE=None
-            {% endif %}
-    
-    (...)
-```
-
-4. In `RESUME`
-
-```diff
-[gcode_macro RESUME]
-rename_existing: BASE_RESUME
-gcode:    
-    {% if printer['pause_resume'].is_paused|int == 1 %}
--        {% if printer.save_variables.variables.box_count >= 1 %} 
-+        {% if printer.mmu.num_gates >= 4 %} 
--            {% if printer.save_variables.variables.enable_box == 1 %}
-+            {% if printer.mmu.enabled %}
-                TRY_RESUME_PRINT
-            {% else %}
-                {% if printer['hall_filament_width_sensor'].Diameter > 0.5 %}
-                    RESUME_PRINT
-                {% else %}
-                    M118 Printer resume failed
-                {% endif %}
-            {% endif %}
-        {% else %}
-            {% if printer['hall_filament_width_sensor'].Diameter > 0.5 %}
-                RESUME_PRINT
-            {% else %}
-                M118 Printer resume failed
-            {% endif %}
-        {% endif %}
-    {% endif %}
-```
-
-### Box temperature & humidity sensor
-
-The Qidi Box has a AHT20_F temperature sensor, which unfortunately is not compatible with the stock AHT10 or AHT20 drivers available in Klipper and will crash in some scenarios. Use the [modified file provided here](aht20_f.py). Simply SSH into your printer and do:
-
-```bash
-cd /home/pi/klipper/klippy/extras
-
-cp aht20_f.py aht20_f.py.bak
-
-wget https://raw.githubusercontent.com/Wazzup77/Happy-Hare-Plus4-Configs/main/aht20_f.py
-```
-
-If you are on Qidi's Klipper, no further action is necessary.
-
-If you are on stock or other Klipper, you need to add [aht20_f] to your `klipper/klippy/extras/temperature_sensors.cfg`.
-
-### Slicer settings
-
-None! The mod is intended to be transparent for the slicer. If your gcode works with a stock Plus4, it should work with Happy Hare. 
-Tested on Orca Slicer using the [following g-codes](https://github.com/Wazzup77/Happy-Hare-Plus4-Configs/blob/main/slicer_machine_gcodes.md), which are meant to replicate the Qidi Slicer profile.
+If you run into issues please report them in the issue tracker here. We are also on Qidi's Discord server [in a dedicated thread](https://discord.com/channels/1184400034641477722/1443579858679500822) if you want to chat.
 
 ## Additional help
 
-Refer to the [Happy Hare documentation](https://github.com/moggieuk/Happy-Hare/wiki/Slicer-Setup).
-
-## User interface
-
-If you want to have a section in your printer web interface, install baseline fluidd or mainsail, which both have HH implemented.
-
-[Happy Hare docs](https://github.com/moggieuk/Happy-Hare/wiki)
-
-## ADVANCED USERS ONLY
-
-Happy Hare allows for a lot of configuration - we will place interesting options and more install steps here.
+Refer to the [Happy Hare documentation](https://github.com/moggieuk/Happy-Hare/wiki).
