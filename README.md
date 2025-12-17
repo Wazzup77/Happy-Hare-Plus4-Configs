@@ -18,7 +18,7 @@
 
  **NOT SUPPORTED:**
  * RFID tags - maybe in the future, but honestly who cares?
-
+u
 ## DEVELOPMENT STATUS
 
  * Happy Hare - the Qidi fork has been developed and tested, but not yet pulled into mainline. You can find it [here](https://github.com/Wazzup77/Happy-Hare).
@@ -32,8 +32,15 @@
 ## ISSUES / TODO
 * Printer screen is broken
 * Error handling could be improved I guess
+* Qidi Studio sync is not working
 
 If you run into issues please report them in the issue tracker here. We are also on Qidi's Discord server [in a dedicated thread](https://discord.com/channels/1184400034641477722/1443579858679500822) if you want to chat.
+
+## HAPPY HARE FORK
+
+We are for now relying on a fork of Happy Hare until our new features are pulled to mainline. This is necessary for handling of the hall effect sensor in the extruder of Qidi printers. 
+
+[Happy Hare Qidi Fork](https://github.com/Wazzup77/Happy-Hare/).
 
 ## ADDITIONAL HELP
 
