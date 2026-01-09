@@ -26,7 +26,7 @@ This will give you a list of USB devices. It should say something like:
 
 Copy that into your mmu.cfg in the `serial:` parameter, replacing the old value.
 
-3. Install Happy Hare from the [WIP Plus4 repo](https://github.com/Wazzup77/Happy-Hare). To do this, connect to your printer via SSH and run:
+3. Install Happy Hare from the [WIP repo](https://github.com/Wazzup77/Happy-Hare). To do this, connect to your printer via SSH and run:
 
 ```bash
 git clone https://github.com/Wazzup77/Happy-Hare.git
@@ -55,11 +55,38 @@ sudo service klipper restart
 <details>
 <summary> `[printer.cfg]` CHANGES </summary>
 
-1. Remove Qidi's stock box config include `[include box.cfg]`
+1. Remove Qidi's stock box config `[include box.cfg]`.
 
 2. Add `[include bunnybox_macros.cfg]` at the top.
 
-3. Remove the `[hall_filament_width_sensor]` section. It is now defined and configured via Happy Hare.
+3. Modify the `[hall_filament_width_sensor]` section as follows (removing or commenting out the red lines):
+```diff
+[hall_filament_width_sensor]
+adc1: PA2
+adc2: PA3
+cal_dia1: 1.50
+cal_dia2: 2.0
+raw_dia1: 14197
+raw_dia2: 15058
+default_nominal_filament_diameter: 1.75
+max_difference: 0
+measurement_delay: 50
+enable: false
+measurement_interval: 10
+logging: False
+min_diameter: 0.3
+use_current_dia_while_delay: False
+-pause_on_runout:True
+-runout_gcode:
+-            RESET_FILAMENT_WIDTH_SENSOR
+-            M118 Filament run out
+-            {% set can_auto_reload = printer.save_variables.variables.auto_reload_detect|default(0) %}
+-            {% if can_auto_reload == 1 %}
+-              AUTO_RELOAD_FILAMENT
+-            {% endif %}
+-event_delay: 3.0
+-pause_delay: 0.5
+```
 
 4. Make sure Happy Hare files were included during install: `[include mmu/base/*.cfg]`.
 
