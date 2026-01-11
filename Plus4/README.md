@@ -209,7 +209,7 @@ gcode:
 The Qidi Box has a AHT20_F temperature sensor, which unfortunately is not compatible with the stock AHT10 or AHT20 drivers available in Klipper and will crash in some scenarios. Use the [modified file provided here](aht20_f.py). Simply SSH into your printer and do:
 
 ```bash
-cd /home/pi/klipper/klippy/extras
+cd /home/mks/klipper/klippy/extras
 
 cp aht20_f.py aht20_f.py.bak
 
@@ -218,7 +218,7 @@ wget https://raw.githubusercontent.com/Wazzup77/Happy-Hare-Plus4-Configs/main/ah
 
 If you are on Qidi's Klipper, no further action is necessary.
 
-If you are on stock or other Klipper, you need to add [aht20_f] to your `klipper/klippy/extras/temperature_sensors.cfg`.
+If you are on stock or other Klipper, you need to add [aht20_bb] to your `klipper/klippy/extras/temperature_sensors.cfg`.
 
 </details>
 
